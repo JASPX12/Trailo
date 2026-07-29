@@ -258,3 +258,75 @@ def descargar_video_local(trailer_key: str, background_tasks: BackgroundTasks):
         "mensaje": "Descarga liviana en segundo plano iniciada."
     }
 
+@app.get("/api/carruseles/{user_id}")
+def obtener_carruseles_usuario(user_id: int, db: Session = Depends(get_db)):
+    # 1. Obtener el país del usuario para el carrusel nacional
+    consulta_usuario = text("SELECT country_code FROM users WHERE id = :user_id")
+    usuario = db.execute(consulta_usuario, {"user_id": user_id}).fetchone()
+    
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    country_code = usuario.country_code
+    
+    carruseles = {
+        "seguir_viendo": [],
+        "nacionales": [],
+        "guardados": [],
+        "recomendados": []
+    }
+
+    # 2. Carrusel: Seguir Viendo (watch_progress)
+    consulta_progreso = text("""
+        SELECT c.* 
+        FROM watch_progress wp 
+        JOIN catalogo_trailers c ON wp.id_trailer = c.movie_id 
+        WHERE wp.user_id = :user_id 
+        ORDER BY wp.updated_at DESC LIMIT 10
+    """)
+    carruseles["seguir_viendo"] = [dict(row) for row in db.execute(consulta_progreso, {"user_id": user_id}).mappings()]
+
+    # 3. Carrusel: Nacionales (Filtro por país del usuario)
+    if country_code:
+        consulta_nacionales = text("""
+            SELECT * FROM catalogo_trailers 
+            WHERE paises_permitidos ILIKE :pais 
+            LIMIT 15
+        """)
+        carruseles["nacionales"] = [dict(row) for row in db.execute(consulta_nacionales, {"pais": f"%{country_code}%"}).mappings()]
+
+    # 4. Carrusel: Guardados (user_watchlist)
+    consulta_guardados = text("""
+        SELECT c.* 
+        FROM user_watchlists uw 
+        JOIN catalogo_trailers c ON uw.movie_id = c.movie_id 
+        WHERE uw.user_id = :user_id 
+        ORDER BY uw.added_at DESC LIMIT 15
+    """)
+    carruseles["guardados"] = [dict(row) for row in db.execute(consulta_guardados, {"user_id": user_id}).mappings()]
+
+    # 5. Carrusel: Recomendados (Basado en el top score de user_category_scores)
+    # Seleccionamos la categoría con mayor puntaje para este usuario
+    consulta_top_categoria = text("""
+        SELECT category_id FROM user_category_scores 
+        WHERE user_id = :user_id 
+        ORDER BY score DESC LIMIT 1
+    """)
+    top_categoria = db.execute(consulta_top_categoria, {"user_id": user_id}).scalar()
+
+    if top_categoria:
+        # Aquí asumimos que category_id se mapea al texto en 'categorias'. 
+        # En tu modelo real, esto cruzaría con una tabla de categorías.
+        consulta_recomendados = text("""
+            SELECT * FROM catalogo_trailers 
+            WHERE categorias ILIKE :categoria 
+            LIMIT 15
+        """)
+        # Nota: Ajusta el parámetro según cómo guardes el nombre de la categoría
+        carruseles["recomendados"] = [dict(row) for row in db.execute(consulta_recomendados, {"categoria": f"%{top_categoria}%"}).mappings()]
+    else:
+        # Si no tiene puntajes, mostramos los más recientes por defecto
+        consulta_defecto = text("SELECT * FROM catalogo_trailers ORDER BY anio DESC LIMIT 15")
+        carruseles["recomendados"] = [dict(row) for row in db.execute(consulta_defecto).mappings()]
+
+    return carruseles
