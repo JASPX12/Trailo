@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="../assets/logo.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Trailo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            color: white;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: url("../assets/idea1wallpaper.png");
+            background-size: cover;
+        }
+
+        .login-box {
+            width: 400px;
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid #d8d8d8;
+            background: #121821;
+            box-shadow: 0 15px 35px #A020F0;
+        }
+
+        .login-box h1 {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        input, select {
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #cfcfcf;
+            color: black;
+            outline: none;
+            font-size: 16px;
+        }
+
+        /* Cambiar el color del texto de la opción seleccionada por defecto */
+        select:invalid {
+            color: gray;
+        }
+
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background-color: #A020F0;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #7b1fa2;
+            transition: 0.3s;
+        }
+
+        .link-login {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .link-login a {
+            color: #A020F0;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .link-login a:hover {
+            text-decoration: underline;
+        }
+
+        #mensaje-error {
+            color: #ff4d4d;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <h1>Registrarse</h1>
+
+            <!-- Formulario conectado a JS -->
+            <form id="form-registro">
+                <input type="text" id="nombre" placeholder="Nombre completo" required>
+
+                <input type="email" id="email" placeholder="Correo electrónico" required>
+
+                <input type="password" id="password" placeholder="Contraseña" required>
+
+                <select id="nacionalidad" required>
+                    <option value="" disabled selected>Selecciona tu nacionalidad</option>
+                    <!-- El value es lo que se envía al backend (2 letras), el texto fuera es lo que ve el usuario -->
+                    <option value="CO">Colombia</option>
+                    <option value="MX">México</option>
+                    <option value="AR">Argentina</option>
+                    <option value="CL">Chile</option>
+                    <option value="ES">España</option>
+                    <option value="US">Estados Unidos</option>
+                </select>
+
+                <p id="mensaje-error"></p>
+
+                <button type="submit">Crear cuenta</button>
+            </form>
+
+            <div class="link-login">
+                ¿Ya tienes cuenta? <a href="log.html">Inicia sesión aquí</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Capturar el evento de envío del formulario
+        document.getElementById('form-registro').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Evita que la página se recargue
+
+            // Obtener los valores del formulario
+            const nombre = document.getElementById('nombre').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const nacionalidad = document.getElementById('nacionalidad').value;
+
+            const mensajeError = document.getElementById('mensaje-error');
+
+            // Ocultar mensaje de error previo
+            mensajeError.style.display = 'none';
+
+            // Estructura que espera FastAPI según nuestro Pydantic BaseModel
+            const datosUsuario = {
+                nombre: nombre,
+                email: email,
+                password: password,
+                nacionalidad: nacionalidad
+            };
+
+            try {
+                // Hacer la petición POST al backend
+                const respuesta = await fetch('http://127.0.0.1:8000/api/registro', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(datosUsuario)
+                });
+
+                const datos = await respuesta.json();
+
+                if (respuesta.ok) {
+                    // Si el registro fue exitoso
+                    alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
+                    window.location.href = "log.html"; // Redirigir al inicio de sesión
+                } else {
+                    // Si hubo un error (ej: Email ya registrado)
+                    mensajeError.textContent = datos.detail || "Ocurrió un error en el registro.";
+                    mensajeError.style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Error de conexión:", error);
+                mensajeError.textContent = "Error conectando al servidor. Asegúrate de que el backend esté ejecutándose.";
+                mensajeError.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="../assets/logo.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Contraseña - Trailo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; color: white; font-family: Arial, sans-serif; }
+        body { min-height: 100vh; display: flex; justify-content: center; align-items: center; background-image: url("../assets/idea1wallpaper.png"); background-size: cover; }
+        .login-box { width: 400px; padding: 40px; border-radius: 20px; border: 1px solid #d8d8d8; background: #121821; box-shadow: 0 15px 35px #A020F0; }
+        h1 { text-align: center; margin-bottom: 25px; font-size: 24px; }
+        form { display: flex; flex-direction: column; gap: 20px; }
+        input { padding: 15px; border-radius: 12px; border: 1px solid #cfcfcf; color: black; outline: none; font-size: 16px; }
+        button { padding: 15px; border: none; border-radius: 12px; background-color: #A020F0; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background-color: #7b1fa2; transition: 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>Actualizar Contraseña</h1>
+        <form id="form-recuperar">
+            <input type="email" id="email" placeholder="Ingresa tu correo" required>
+            <input type="password" id="nueva_password" placeholder="Nueva contraseña" required>
+            <button type="submit">Cambiar contraseña</button>
+            <p id="mensaje-estado" style="text-align: center; font-size: 14px; display: none; margin-top: 10px;"></p>
+        </form>
+        <div style="text-align: center; margin-top: 20px; font-size: 14px;">
+            <a href="log.html" style="color: #A020F0; text-decoration: none;">Volver al inicio de sesión</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('form-recuperar').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const nueva_password = document.getElementById('nueva_password').value;
+            const mensajeEstado = document.getElementById('mensaje-estado');
+
+            mensajeEstado.style.display = 'block';
+            mensajeEstado.style.color = 'white';
+            mensajeEstado.textContent = "Procesando...";
+
+            try {
+                const respuesta = await fetch('http://127.0.0.1:8000/api/actualizar-password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, nueva_password: nueva_password })
+                });
+
+                const datos = await respuesta.json();
+
+                if (respuesta.ok) {
+                    mensajeEstado.style.color = '#4caf50'; // Verde
+                    mensajeEstado.textContent = "¡Contraseña actualizada! Ya puedes iniciar sesión.";
+                    document.getElementById('form-recuperar').reset();
+                } else {
+                    mensajeEstado.style.color = '#ff4d4d'; // Rojo
+                    mensajeEstado.textContent = datos.detail || "Error al actualizar.";
+                }
+            } catch (error) {
+                mensajeEstado.style.color = '#ff4d4d';
+                mensajeEstado.textContent = "Error conectando al servidor.";
+            }
+        });
+    </script>
+</body>
+</html>
