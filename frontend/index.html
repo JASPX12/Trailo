@@ -117,12 +117,13 @@
     <div id="contenedor-peliculas" class="grid-peliculas"></div>
 
     <script>
-        // Tus funciones originales de JavaScript intactas
+        // Funciones corregidas con los puertos y rutas exactas
         function cargarCatalogo() {
             const contenedor = document.getElementById('contenedor-peliculas');
             contenedor.innerHTML = '<p style="text-align:center;">Conectando al servidor local...</p>';
 
-            fetch('http://127.0.0')
+            // CORRECCIÓN 1: Ruta completa con el puerto 8000 y el path correcto
+            fetch('http://127.0.0.1:8000/api/catalogo')
                 .then(respuesta => respuesta.json())
                 .then(datos => {
                     contenedor.innerHTML = ''; 
@@ -130,7 +131,8 @@
                     const primerasPeliculas = datos.datos.slice(0, 20);
 
                     primerasPeliculas.forEach(peli => {
-                        const miniatura = `https://youtube.com{peli.trailer_key}/hqdefault.jpg`;
+                        // CORRECCIÓN 2: Uso correcto de template strings (backticks) y sintaxis de YouTube
+                        const miniatura = `https://img.youtube.com/vi/${peli.trailer_key}/hqdefault.jpg`;
 
                         const tarjetaHTML = `
                             <div class="tarjeta" id="tarjeta-${peli.trailer_key}">
@@ -159,7 +161,8 @@
             const divReproductor = document.getElementById(`reproductor-${trailer_key}`);
             divReproductor.innerHTML = "<p style='font-size: 0.9rem; color: #ffeb3b;'>Conectando al servidor... ⏳</p>";
 
-            fetch(`http://127.0.0{trailer_key}`, { method: 'POST' })
+            // CORRECCIÓN 3: Ruta completa y template literal correcto
+            fetch(`http://127.0.0.1:8000/api/descargar/${trailer_key}`, { method: 'POST' })
                 .then(respuesta => respuesta.json())
                 .then(datos => {
                     if (datos.status === "ready") {
@@ -168,7 +171,8 @@
                         divReproductor.innerHTML = "<p style='font-size: 0.9rem; color: #ffeb3b;'>Descargando (optimizado)... ⏳</p>";
                         
                         const intervalo = setInterval(() => {
-                            fetch(`http://127.0.0{trailer_key}`, { method: 'POST' })
+                            // CORRECCIÓN 4: Ruta completa y template literal correcto para el sondeo (polling)
+                            fetch(`http://127.0.0.1:8000/api/descargar/${trailer_key}`, { method: 'POST' })
                                 .then(res => res.json())
                                 .then(nuevoEstado => {
                                     if (nuevoEstado.status === "ready") {
@@ -178,6 +182,10 @@
                                 });
                         }, 3000);
                     }
+                })
+                .catch(err => {
+                     divReproductor.innerHTML = "<p style='color:red;'>Error al intentar descargar.</p>";
+                     console.error(err);
                 });
         }
 
