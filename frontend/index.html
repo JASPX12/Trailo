@@ -186,16 +186,6 @@
             // 3. Si existe, ejecutamos la función para traer sus datos
             cargarCarruseles(userId);
         });
-
-        // Lógica para el botón de Cerrar Sesión
-        document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
-            // Limpiamos todo el rastro de seguridad
-            localStorage.removeItem('user_id'); 
-            localStorage.removeItem('session_id'); 
-            
-            // Redirigimos al inicio
-            window.location.href = 'log.html';
-        });
         
         // 1. Tarjetas más limpias (sin el reproductor adentro)
         function generarTarjetasHTML(listaPeliculas) {
@@ -283,6 +273,9 @@
 
             // Cargamos si esta película ya está en Mi Lista
             cargarEstadoGuardado(movieId);
+
+            // Registramos que el usuario abrió/reprodujo este trailer (Seguir Viendo)
+            registrarProgreso(movieId);
         }
 
         // 3.1 Consultar cuántos likes lleva la película y pintar el botón acorde
@@ -321,6 +314,18 @@
             if (!btnGuardar) return;
             btnGuardar.textContent = guardado ? '✅ En mi lista' : '⭐ Añadir a mi lista';
             btnGuardar.dataset.guardado = guardado;
+        }
+
+        // 3.3 Registrar que el usuario vio/abrió este trailer, para el carrusel "Seguir Viendo"
+        function registrarProgreso(movieId) {
+            const userId = localStorage.getItem('user_id');
+            if (!userId) return;
+
+            fetch(`http://127.0.0.1:8000/api/progreso/${movieId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: parseInt(userId) })
+            }).catch(err => console.error(err));
         }
 
         // 4. Cerrar el Modal y destruir el video para que no siga sonando
@@ -368,6 +373,43 @@
                 });
         }
 
+        // Búsqueda por nombre de película
+        document.getElementById('busco').addEventListener('keyup', (evento) => {
+            if (evento.key !== 'Enter') return;
+
+            const texto = evento.target.value.trim();
+
+            if (texto) {
+                buscarPeliculas(texto);
+            } else {
+                // Si borran el texto y dan Enter, volvemos al catálogo normal
+                const userId = localStorage.getItem('user_id');
+                cargarCarruseles(userId);
+            }
+        });
+
+        function buscarPeliculas(texto) {
+            const contenedorPrincipal = document.getElementById('contenedor-principal');
+            contenedorPrincipal.innerHTML = '<p style="text-align:center;">Buscando...</p>';
+
+            fetch(`http://127.0.0.1:8000/api/catalogo?busqueda=${encodeURIComponent(texto)}`)
+                .then(respuesta => respuesta.json())
+                .then(datos => {
+                    contenedorPrincipal.innerHTML = '';
+
+                    if (!datos.datos || datos.datos.length === 0) {
+                        contenedorPrincipal.innerHTML = '<p style="text-align:center;">No encontramos películas con ese nombre.</p>';
+                        return;
+                    }
+
+                    agregarSeccion(`Resultados para "${texto}"`, datos.datos, contenedorPrincipal);
+                })
+                .catch(err => {
+                    contenedorPrincipal.innerHTML = '<p style="color:red; text-align:center;">Error conectando al backend.</p>';
+                    console.error(err);
+                });
+        }
+
         function descargarYReproducir(trailer_key) {
             const divReproductor = document.getElementById(`reproductor-${trailer_key}`);
             divReproductor.innerHTML = "<p style='font-size: 0.9rem; color: #ffeb3b;'>Conectando al servidor... ⏳</p>";
@@ -395,8 +437,8 @@
                     }
                 })
                 .catch(err => {
-                     divReproductor.innerHTML = "<p style='color:red;'>Error al intentar descargar.</p>";
-                     console.error(err);
+                    divReproductor.innerHTML = "<p style='color:red;'>Error al intentar descargar.</p>";
+                    console.error(err);
                 });
         }
         function mostrarReproductor(trailer_key, url) {

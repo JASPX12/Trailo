@@ -60,6 +60,9 @@ class LikeRequest(BaseModel):
 class GuardarRequest(BaseModel):
     user_id: int
 
+class ProgresoRequest(BaseModel):
+    user_id: int
+
 @app.post("/api/registro", status_code=status.HTTP_201_CREATED)
 def registrar_usuario(usuario: UsuarioRegistro, db: Session = Depends(get_db)):
     # 1. Verificar si el correo ya existe en la base de datos
@@ -215,16 +218,11 @@ def obtener_catalogo(
     # 4. Ejecutamos usando text() y pasamos el diccionario de parámetros
     resultados = db.execute(text(consulta_str), parametros).mappings().fetchall()
 
-    # 5. Formateamos la respuesta (usando .get() sobre el mapping por seguridad)
+    # 5. Devolvemos las filas completas (mismo formato que usan los carruseles,
+    #    así el frontend puede reusar generarTarjetasHTML con movie_id incluido)
     datos = []
     for fila in resultados:
-        datos.append({
-            "pelicula": fila.get("pelicula", "Sin título"),
-            "trailer_key": fila.get("trailer_link", ""),
-            "categorias": fila.get("categorias", ""),
-            "paises_permitidos": fila.get("paises_permitidos", ""),
-            "idiomas": fila.get("idiomas_disponibles", "")
-        })
+        datos.append(dict(fila))
 
     return {"datos": datos}
 
@@ -454,3 +452,45 @@ def obtener_mi_lista(user_id: int, db: Session = Depends(get_db)):
     """)
     resultados = [dict(row) for row in db.execute(consulta, {"user_id": user_id}).mappings()]
     return {"datos": resultados}
+
+# 8. Registrar progreso (Seguir Viendo)
+@app.post("/api/progreso/{movie_id}")
+def actualizar_progreso(movie_id: int, datos: ProgresoRequest, db: Session = Depends(get_db)):
+    consulta_existe = text(
+        "SELECT 1 FROM watch_progress WHERE user_id = :user_id AND id_trailer = :movie_id"
+    )
+    existe = db.execute(
+        consulta_existe, {"user_id": datos.user_id, "movie_id": movie_id}
+    ).fetchone()
+
+    try:
+        if existe:
+            # Ya lo había visto antes -> solo actualizamos la fecha para que suba al tope
+            db.execute(
+                text("""
+                    UPDATE watch_progress 
+                    SET updated_at = NOW() 
+                    WHERE user_id = :user_id AND id_trailer = :movie_id
+                """),
+                {"user_id": datos.user_id, "movie_id": movie_id}
+            )
+        else:
+            # Primera vez que abre este trailer -> lo agregamos al historial
+            db.execute(
+                text("""
+                    INSERT INTO watch_progress (user_id, id_trailer, updated_at) 
+                    VALUES (:user_id, :movie_id, NOW())
+                """),
+                {"user_id": datos.user_id, "movie_id": movie_id}
+            )
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar tu progreso: {str(e)}"
+        )
+
+    return {"mensaje": "Progreso actualizado"}
