@@ -267,16 +267,38 @@
             
             // Inyectamos los botones con el ID correcto de la película
             accionesModal.innerHTML = `
-                <button onclick="darLike(${movieId})" class="btn-accion btn-like">
+                <button onclick="darLike(${movieId})" id="btn-like-conteo" class="btn-accion btn-like">
                     ❤️ Me Gusta
                 </button>
                 <button onclick="guardarFavorito(${movieId})" class="btn-accion btn-guardar">
                     ⭐ Añadir a mi lista
                 </button>
             `;
-            
+
             // Revelamos los botones
             accionesModal.style.display = 'flex';
+
+            // Cargamos el conteo actual de likes (y si este usuario ya dio like)
+            cargarEstadoLike(movieId);
+        }
+
+        // 3.1 Consultar cuántos likes lleva la película y pintar el botón acorde
+        function cargarEstadoLike(movieId) {
+            const userId = localStorage.getItem('user_id');
+            const btnLike = document.getElementById('btn-like-conteo');
+            if (!btnLike) return;
+
+            fetch(`http://127.0.0.1:8000/api/like/${movieId}?user_id=${userId || ''}`)
+                .then(respuesta => respuesta.json())
+                .then(datos => pintarBotonLike(datos.liked, datos.likes))
+                .catch(err => console.error(err));
+        }
+
+        function pintarBotonLike(liked, totalLikes) {
+            const btnLike = document.getElementById('btn-like-conteo');
+            if (!btnLike) return;
+            btnLike.textContent = `${liked ? '❤️' : '🤍'} Me Gusta (${totalLikes})`;
+            btnLike.dataset.liked = liked;
         }
 
         // 4. Cerrar el Modal y destruir el video para que no siga sonando
@@ -371,9 +393,18 @@
         function darLike(movieId) {
             const userId = localStorage.getItem('user_id');
             if (!userId) return alert("Debes iniciar sesión primero");
-            
-            // Aquí irá tu lógica fetch para mandar el LIKE al backend
-            alert(`¡Le diste Like a la película con ID: ${movieId}!`);
+
+            fetch(`http://127.0.0.1:8000/api/like/${movieId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: parseInt(userId) })
+            })
+                .then(respuesta => respuesta.json())
+                .then(datos => pintarBotonLike(datos.liked, datos.likes))
+                .catch(err => {
+                    console.error(err);
+                    alert('No se pudo procesar el like.');
+                });
         }
 
         function guardarFavorito(movieId) {

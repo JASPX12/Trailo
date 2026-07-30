@@ -54,6 +54,9 @@ class UsuarioActualizarPassword(BaseModel):
     email: EmailStr
     nueva_password: str = Field(...,min_length=4, max_length=72)
 
+class LikeRequest(BaseModel):
+    user_id: int
+
 @app.post("/api/registro", status_code=status.HTTP_201_CREATED)
 def registrar_usuario(usuario: UsuarioRegistro, db: Session = Depends(get_db)):
     # 1. Verificar si el correo ya existe en la base de datos
@@ -330,3 +333,64 @@ def obtener_carruseles_usuario(user_id: int, db: Session = Depends(get_db)):
         carruseles["recomendados"] = [dict(row) for row in db.execute(consulta_defecto).mappings()]
 
     return carruseles
+
+
+# 6. Sistema de Likes
+@app.post("/api/like/{movie_id}")
+def dar_like(movie_id: int, datos: LikeRequest, db: Session = Depends(get_db)):
+
+    # 1. Verificar si el usuario ya le había dado like a esta película
+    consulta_existe = text(
+        "SELECT id FROM video_likes WHERE user_id = :user_id AND movie_id = :movie_id"
+    )
+    like_existente = db.execute(
+        consulta_existe, {"user_id": datos.user_id, "movie_id": movie_id}
+    ).fetchone()
+
+    try:
+        if like_existente:
+            # Ya existía -> quito el like
+            db.execute(text("DELETE FROM video_likes WHERE id = :id"), {"id": like_existente.id})
+            liked = False
+        else:
+            # No existía ->  agrego el like
+            db.execute(
+                text("INSERT INTO video_likes (user_id, movie_id) VALUES (:user_id, :movie_id)"),
+                {"user_id": datos.user_id, "movie_id": movie_id}
+            )
+            liked = True
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al procesar el like: {str(e)}"
+        )
+
+    # 2. Contamos cuántos likes lleva la película después del cambio
+    consulta_conteo = text("SELECT COUNT(*) FROM video_likes WHERE movie_id = :movie_id")
+    total_likes = db.execute(consulta_conteo, {"movie_id": movie_id}).scalar()
+
+    return {"liked": liked, "likes": total_likes}
+
+
+@app.get("/api/like/{movie_id}")
+def obtener_likes(movie_id: int, user_id: int = None, db: Session = Depends(get_db)):
+    # 1. Contamos el total de likes de la película
+    consulta_conteo = text("SELECT COUNT(*) FROM video_likes WHERE movie_id = :movie_id")
+    total_likes = db.execute(consulta_conteo, {"movie_id": movie_id}).scalar()
+
+    # 2. Si nos mandan el user_id, revisamos si ese usuario ya dio like
+    ya_dio_like = False
+    if user_id:
+        consulta_usuario = text(
+            "SELECT id FROM video_likes WHERE movie_id = :movie_id AND user_id = :user_id"
+        )
+        resultado = db.execute(
+            consulta_usuario, {"movie_id": movie_id, "user_id": user_id}
+        ).fetchone()
+        ya_dio_like = resultado is not None
+
+    return {"movie_id": movie_id, "likes": total_likes, "liked": ya_dio_like}
