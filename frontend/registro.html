@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - Trailo</title>
     <style>
+
+
         * {
             margin: 0;
             padding: 0;
@@ -14,6 +16,9 @@
             font-family: Arial, Helvetica, sans-serif;
         }
 
+        #seleccion_pais{
+            color: #121821;
+        }
         body {
             min-height: 100vh;
             display: flex;
@@ -113,12 +118,12 @@
                 <select id="nacionalidad" required>
                     <option value="" disabled selected>Selecciona tu nacionalidad</option>
                     <!-- El value es lo que se envía al backend (2 letras), el texto fuera es lo que ve el usuario -->
-                    <option value="CO">Colombia</option>
-                    <option value="MX">México</option>
-                    <option value="AR">Argentina</option>
-                    <option value="CL">Chile</option>
-                    <option value="ES">España</option>
-                    <option value="US">Estados Unidos</option>
+                    <option id = "seleccion_pais" value="CO">Colombia</option>
+                    <option id = "seleccion_pais" value="MX">México</option>
+                    <option id = "seleccion_pais" value="AR">Argentina</option>
+                    <option id = "seleccion_pais" value="CL">Chile</option>
+                    <option id = "seleccion_pais" value="ES">España</option>
+                    <option id = "seleccion_pais"  value="US">Estados Unidos</option>
                 </select>
 
                 <p id="mensaje-error"></p>
