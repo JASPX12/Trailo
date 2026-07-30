@@ -57,6 +57,9 @@ class UsuarioActualizarPassword(BaseModel):
 class LikeRequest(BaseModel):
     user_id: int
 
+class GuardarRequest(BaseModel):
+    user_id: int
+
 @app.post("/api/registro", status_code=status.HTTP_201_CREATED)
 def registrar_usuario(usuario: UsuarioRegistro, db: Session = Depends(get_db)):
     # 1. Verificar si el correo ya existe en la base de datos
@@ -394,3 +397,60 @@ def obtener_likes(movie_id: int, user_id: int = None, db: Session = Depends(get_
         ya_dio_like = resultado is not None
 
     return {"movie_id": movie_id, "likes": total_likes, "liked": ya_dio_like}
+
+# 7. Sistema de Mi Lista (Watchlist)
+@app.post("/api/guardar/{movie_id}")
+def alternar_guardado(movie_id: int, datos: GuardarRequest, db: Session = Depends(get_db)):
+    consulta_existe = text(
+        "SELECT 1 FROM user_watchlists WHERE user_id = :user_id AND movie_id = :movie_id"
+    )
+    existe = db.execute(
+        consulta_existe, {"user_id": datos.user_id, "movie_id": movie_id}
+    ).fetchone()
+
+    try:
+        if existe:
+            db.execute(
+                text("DELETE FROM user_watchlists WHERE user_id = :user_id AND movie_id = :movie_id"),
+                {"user_id": datos.user_id, "movie_id": movie_id}
+            )
+            guardado = False
+        else:
+            db.execute(
+                text("INSERT INTO user_watchlists (user_id, movie_id) VALUES (:user_id, :movie_id)"),
+                {"user_id": datos.user_id, "movie_id": movie_id}
+            )
+            guardado = True
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar tu lista: {str(e)}"
+        )
+
+    return {"guardado": guardado}
+
+
+@app.get("/api/guardar/{movie_id}")
+def estado_guardado(movie_id: int, user_id: int, db: Session = Depends(get_db)):
+    consulta = text(
+        "SELECT 1 FROM user_watchlists WHERE user_id = :user_id AND movie_id = :movie_id"
+    )
+    existe = db.execute(consulta, {"user_id": user_id, "movie_id": movie_id}).fetchone()
+    return {"guardado": existe is not None}
+
+
+@app.get("/api/mi-lista/{user_id}")
+def obtener_mi_lista(user_id: int, db: Session = Depends(get_db)):
+    consulta = text("""
+        SELECT c.*
+        FROM user_watchlists uw
+        JOIN catalogo_trailers c ON uw.movie_id = c.movie_id
+        WHERE uw.user_id = :user_id
+        ORDER BY uw.added_at DESC
+    """)
+    resultados = [dict(row) for row in db.execute(consulta, {"user_id": user_id}).mappings()]
+    return {"datos": resultados}

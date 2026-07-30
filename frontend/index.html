@@ -143,7 +143,7 @@
             <input type="text" id="busco" placeholder="Que trailer deseas buscar...">
         </div>
         <div class="botones-header">
-            <button class="btn-head btn-header-fav"><a href="favoritos.html" style="color:white; text-decoration:none;">Favoritos</a></button>
+            <button class="btn-head btn-header-fav"><a href="favoritos.html" style="color:white; text-decoration:none;">Mi Lista</a></button>
             <a href="log.html" class="btn-head btn-header-salir">Cerrar sesión</a>
         </div>
     </header>
@@ -270,7 +270,7 @@
                 <button onclick="darLike(${movieId})" id="btn-like-conteo" class="btn-accion btn-like">
                     ❤️ Me Gusta
                 </button>
-                <button onclick="guardarFavorito(${movieId})" class="btn-accion btn-guardar">
+                <button onclick="guardarFavorito(${movieId})" id="btn-guardar-estado" class="btn-accion btn-guardar">
                     ⭐ Añadir a mi lista
                 </button>
             `;
@@ -280,6 +280,9 @@
 
             // Cargamos el conteo actual de likes (y si este usuario ya dio like)
             cargarEstadoLike(movieId);
+
+            // Cargamos si esta película ya está en Mi Lista
+            cargarEstadoGuardado(movieId);
         }
 
         // 3.1 Consultar cuántos likes lleva la película y pintar el botón acorde
@@ -299,6 +302,25 @@
             if (!btnLike) return;
             btnLike.textContent = `${liked ? '❤️' : '🤍'} Me Gusta (${totalLikes})`;
             btnLike.dataset.liked = liked;
+        }
+
+        // 3.2 Consultar si la película ya está en Mi Lista y pintar el botón acorde
+        function cargarEstadoGuardado(movieId) {
+            const userId = localStorage.getItem('user_id');
+            const btnGuardar = document.getElementById('btn-guardar-estado');
+            if (!btnGuardar || !userId) return;
+
+            fetch(`http://127.0.0.1:8000/api/guardar/${movieId}?user_id=${userId}`)
+                .then(respuesta => respuesta.json())
+                .then(datos => pintarBotonGuardar(datos.guardado))
+                .catch(err => console.error(err));
+        }
+
+        function pintarBotonGuardar(guardado) {
+            const btnGuardar = document.getElementById('btn-guardar-estado');
+            if (!btnGuardar) return;
+            btnGuardar.textContent = guardado ? '✅ En mi lista' : '⭐ Añadir a mi lista';
+            btnGuardar.dataset.guardado = guardado;
         }
 
         // 4. Cerrar el Modal y destruir el video para que no siga sonando
@@ -410,9 +432,18 @@
         function guardarFavorito(movieId) {
             const userId = localStorage.getItem('user_id');
             if (!userId) return alert("Debes iniciar sesión primero");
-            
-            // Aquí irá tu lógica fetch para mandar el GUARDADO al backend
-            alert(`¡Película con ID ${movieId} guardada en tu lista!`);
+
+            fetch(`http://127.0.0.1:8000/api/guardar/${movieId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: parseInt(userId) })
+            })
+                .then(respuesta => respuesta.json())
+                .then(datos => pintarBotonGuardar(datos.guardado))
+                .catch(err => {
+                    console.error(err);
+                    alert('No se pudo actualizar tu lista.');
+                });
         }
         
     </script>

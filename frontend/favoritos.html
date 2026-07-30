@@ -1,31 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Favoritos</title>
+    <title>Mi Lista - Trailo</title>
     <link rel="icon" href="../assets/logo.png">
     <style>
-        body{
-            background-image: url("../assets/idea1wallpaper.png");
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-image: url("../assets/idea1wallpaper.png"); color: white; padding: 20px; }
+        h1 { text-align: center; color: #A020F0; }
 
-        button{
-            background-color: #A020F0;
-            /*border-radius: 30%;*/
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #111114; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px;
         }
-        button:hover{
-            background-color: #7b1fa2;
-            transition: 0.5s;
-            border-radius: 20%;
+        .logo-seccion { display: flex; align-items: center; gap: 12px; }
+        .logo-seccion img { width: 42px; height: 42px; }
+        .buscar { flex-grow: 1; margin: 0 40px; max-width: 600px; }
+        .buscar input { width: 100%; height: 42px; border: none; outline: none; border-radius: 25px; padding: 0 25px; background-color: white; color: black; font-size: 15px; }
+        .logo-seccion h2 { margin: 0; color: white; font-size: 24px; }
+        .botones-header { display: flex; flex-direction: column; gap: 8px; width: 140px; }
+        .btn-head { width: 100%; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: none; border: none; text-align: center; transition: 0.3s; }
+        .btn-header-fav { background-color: #1c1c24; color: white; border: 1px solid #A020F0; }
+        .btn-header-fav:hover { background-color: #A020F0; }
+        .btn-header-salir { background-color: #A020F0; color: white; }
+        .btn-header-salir:hover { background-color: #7b1fa2; }
 
-        }
+        .carrusel-contenedor { display: flex; flex-wrap: wrap; gap: 20px; padding-bottom: 15px; }
 
-        .btn-header-salir{
-            color: white;
+        .tarjeta {
+            background-color: #222;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            flex: 0 0 300px;
         }
+        .tarjeta h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
+        .categorias { font-size: 0.8rem; color: #aaa; margin-bottom: 15px; font-style: italic; flex-grow: 1;}
+        .btn-quitar { width: 100%; padding: 10px; background: #e91e63; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; margin-top: 10px; }
+        .btn-quitar:hover { background: #c2185b; }
     </style>
-
 </head>
 
 <body>
@@ -38,8 +53,76 @@
             <input type="text" id="busco" placeholder="Que trailer deseas buscar...">
         </div>
         <div class="botones-header">
-            <button><a href="log.html" class="btn-head btn-header-salir">Cerrar sesión</a></button>
+            <button class="btn-head btn-header-fav"><a href="index.html" style="color:white; text-decoration:none;">Inicio</a></button>
+            <a href="log.html" class="btn-head btn-header-salir">Cerrar sesión</a>
         </div>
     </header>
+
+    <h1>Mi Lista</h1>
+    <div id="contenedor-lista" style="margin-top: 30px;"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userId = localStorage.getItem('user_id');
+            if (!userId) {
+                window.location.href = 'log.html';
+                return;
+            }
+            cargarMiLista(userId);
+        });
+
+        function cargarMiLista(userId) {
+            const contenedor = document.getElementById('contenedor-lista');
+            contenedor.innerHTML = '<p style="text-align:center;">Cargando tu lista...</p>';
+
+            fetch(`http://127.0.0.1:8000/api/mi-lista/${userId}`)
+                .then(respuesta => respuesta.json())
+                .then(datos => pintarLista(datos.datos))
+                .catch(err => {
+                    contenedor.innerHTML = '<p style="color:red; text-align:center;">Error conectando al backend.</p>';
+                    console.error(err);
+                });
+        }
+
+        function pintarLista(peliculas) {
+            const contenedor = document.getElementById('contenedor-lista');
+
+            if (!peliculas || peliculas.length === 0) {
+                contenedor.innerHTML = '<p style="text-align:center;">Todavía no has guardado ninguna película.</p>';
+                return;
+            }
+
+            contenedor.innerHTML = `
+                <div class="carrusel-contenedor">
+                    ${peliculas.map(peli => `
+                        <div class="tarjeta" id="tarjeta-${peli.movie_id}">
+                            <h3>${peli.nombre_pelicula || peli.pelicula}</h3>
+                            <div class="categorias">${peli.categorias}</div>
+                            <button class="btn-quitar" onclick="quitarDeLista(${peli.movie_id})">Quitar de mi lista</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function quitarDeLista(movieId) {
+            const userId = localStorage.getItem('user_id');
+
+            fetch(`http://127.0.0.1:8000/api/guardar/${movieId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: parseInt(userId) })
+            })
+                .then(respuesta => respuesta.json())
+                .then(() => {
+                    const tarjeta = document.getElementById(`tarjeta-${movieId}`);
+                    if (tarjeta) tarjeta.remove();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('No se pudo quitar de tu lista.');
+                });
+        }
+    </script>
 </body>
 </html>
