@@ -6,11 +6,9 @@
     <title>Catálogo OTT - MVP</title>
     <link rel="icon" href="../assets/logo.png">
     <style>
-        /* Estilos originales preservados, incluyendo tu imagen de fondo */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-image: url("../assets/idea1wallpaper.png"); color: white; padding: 20px; }
         h1 { text-align: center; color: #A020F0; }
         
-        /* NUEVO CSS PARA CARRUSELES */
         .seccion-carrusel { margin-bottom: 40px; }
         .seccion-carrusel h2 {
             border-left: 5px solid #A020F0;
@@ -25,11 +23,9 @@
             padding-bottom: 15px;
             scroll-behavior: smooth;
         }
-        /* Estilizar la barra de scroll del carrusel */
         .carrusel-contenedor::-webkit-scrollbar { height: 8px; }
         .carrusel-contenedor::-webkit-scrollbar-thumb { background: #A020F0; border-radius: 4px; }
         
-        /* Ajuste de tarjeta para que no cambie de tamaño en el carrusel */
         .tarjeta { 
             background-color: #222; 
             border-radius: 8px; 
@@ -37,7 +33,7 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.5); 
             display: flex; 
             flex-direction: column;
-            flex: 0 0 300px; /* Ancho fijo para las tarjetas en el carrusel */
+            flex: 0 0 300px;
         }
         
         .tarjeta h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
@@ -63,14 +59,14 @@
         .btn-header-salir:hover { background-color: #7b1fa2; }
 
         .modal-overlay {
-            display: none; /* Oculto por defecto */
+            display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); /* Fondo oscuro translúcido */
-            z-index: 2000; /* Siempre por encima de todo */
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
             justify-content: center;
             align-items: center;
-            backdrop-filter: blur(5px); /* Efecto de desenfoque moderno */
+            backdrop-filter: blur(5px);
         }
 
         .modal-contenido {
@@ -78,7 +74,7 @@
             padding: 20px;
             border-radius: 12px;
             width: 90%;
-            max-width: 900px; /* Tamaño máximo del reproductor */
+            max-width: 900px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             position: relative;
             border: 1px solid #333;
@@ -150,7 +146,6 @@
 
     <h1>Inicio</h1>
     <div style="text-align: center;">
-        <!-- Pasa el ID del usuario activo aquí. Por ahora está quemado el ID 1 como ejemplo -->
         <button onclick="cargarCarruseles(1)" class="btn-descarga" style="width: auto; padding: 10px 20px; font-size: 1rem;">
             Cargar Catálogo Personalizado
         </button>
@@ -159,14 +154,11 @@
         <div class="modal-contenido">
             <button class="btn-cerrar-modal" onclick="cerrarModal()">✕</button>
             
-            <!-- Aquí adentro se inyectará el video dinámicamente -->
             <div id="espacio-video-modal" style="text-align: center; color: #ffeb3b; min-height: 200px; display: flex; align-items: center; justify-content: center;">
                 Cargando...
             </div>
             
-            <!-- Botones de acción debajo del video -->
             <div id="acciones-modal" class="acciones-modal" style="display: none;">
-                <!-- Se llenarán dinámicamente para saber a qué película darle like -->
             </div>
         </div>
     </div>
@@ -174,20 +166,16 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Buscamos exactamente la llave que definiste en el login
             const userId = localStorage.getItem('user_id');
             
-            // 2. Si no existe (el usuario intentó saltarse el login), lo devolvemos
             if (!userId) {
                 window.location.href = 'log.html';
                 return; 
             }
             
-            // 3. Si existe, ejecutamos la función para traer sus datos
             cargarCarruseles(userId);
         });
         
-        // 1. Tarjetas más limpias (sin el reproductor adentro)
         function generarTarjetasHTML(listaPeliculas) {
             return listaPeliculas.map(peli => {
                 const miniatura = `https://img.youtube.com/vi/${peli.trailer_link}/hqdefault.jpg`;
@@ -205,18 +193,15 @@
             }).join('');
         }
 
-        // 2. Lógica para abrir el Modal y empezar a descargar
         function abrirModalDescarga(trailer_key, movieId) {
             const modal = document.getElementById('modal-reproductor');
             const espacioVideo = document.getElementById('espacio-video-modal');
             const accionesModal = document.getElementById('acciones-modal');
             
-            // Mostramos el modal oscuro
             modal.style.display = 'flex';
             espacioVideo.innerHTML = '<h3>Conectando al servidor... ⏳</h3>';
-            accionesModal.style.display = 'none'; // Ocultamos los botones hasta que el video cargue
+            accionesModal.style.display = 'none';
 
-            // Petición al backend (tu mismo código)
             fetch(`http://127.0.0.1:8000/api/descargar/${trailer_key}`, { method: 'POST' })
                 .then(respuesta => respuesta.json())
                 .then(datos => {
@@ -242,12 +227,10 @@
                 });
         }
 
-        // 3. Inyectar el video y los botones cuando ya está descargado
         function mostrarReproductorEnModal(url, movieId) {
             const espacioVideo = document.getElementById('espacio-video-modal');
             const accionesModal = document.getElementById('acciones-modal');
             
-            // Inyectamos el video
             espacioVideo.innerHTML = `
                 <video controls autoplay style="width: 100%; border-radius: 8px; aspect-ratio: 16/9; background: black;">
                     <source src="${url}" type="video/mp4">
@@ -255,7 +238,6 @@
                 </video>
             `;
             
-            // Inyectamos los botones con el ID correcto de la película
             accionesModal.innerHTML = `
                 <button onclick="darLike(${movieId})" id="btn-like-conteo" class="btn-accion btn-like">
                     ❤️ Me Gusta
@@ -265,20 +247,15 @@
                 </button>
             `;
 
-            // Revelamos los botones
             accionesModal.style.display = 'flex';
 
-            // Cargamos el conteo actual de likes (y si este usuario ya dio like)
             cargarEstadoLike(movieId);
 
-            // Cargamos si esta película ya está en Mi Lista
             cargarEstadoGuardado(movieId);
 
-            // Registramos que el usuario abrió/reprodujo este trailer (Seguir Viendo)
             registrarProgreso(movieId);
         }
 
-        // 3.1 Consultar cuántos likes lleva la película y pintar el botón acorde
         function cargarEstadoLike(movieId) {
             const userId = localStorage.getItem('user_id');
             const btnLike = document.getElementById('btn-like-conteo');
@@ -297,7 +274,6 @@
             btnLike.dataset.liked = liked;
         }
 
-        // 3.2 Consultar si la película ya está en Mi Lista y pintar el botón acorde
         function cargarEstadoGuardado(movieId) {
             const userId = localStorage.getItem('user_id');
             const btnGuardar = document.getElementById('btn-guardar-estado');
@@ -316,7 +292,6 @@
             btnGuardar.dataset.guardado = guardado;
         }
 
-        // 3.3 Registrar que el usuario vio/abrió este trailer, para el carrusel "Seguir Viendo"
         function registrarProgreso(movieId) {
             const userId = localStorage.getItem('user_id');
             if (!userId) return;
@@ -328,17 +303,15 @@
             }).catch(err => console.error(err));
         }
 
-        // 4. Cerrar el Modal y destruir el video para que no siga sonando
         function cerrarModal() {
             const modal = document.getElementById('modal-reproductor');
             const espacioVideo = document.getElementById('espacio-video-modal');
             
             modal.style.display = 'none';
-            espacioVideo.innerHTML = ''; // Esto corta la reproducción inmediatamente
+            espacioVideo.innerHTML = '';
         }
 
         function agregarSeccion(titulo, listaPeliculas, contenedorPadre) {
-            // Regla de negocio: Si no hay películas (ej. no hay "Seguir Viendo"), no renderiza el carrusel
             if (!listaPeliculas || listaPeliculas.length === 0) return;
 
             const seccionHTML = `
@@ -361,7 +334,6 @@
                 .then(datos => {
                     contenedorPrincipal.innerHTML = ''; 
                     
-                    // Renderizado secuencial. Solo aparecerán si traen datos.
                     agregarSeccion('Seguir Viendo', datos.seguir_viendo, contenedorPrincipal);
                     agregarSeccion('Tendencias en tu País', datos.nacionales, contenedorPrincipal);
                     agregarSeccion('Tus Guardados', datos.guardados, contenedorPrincipal);
@@ -373,7 +345,6 @@
                 });
         }
 
-        // Búsqueda por nombre de película
         document.getElementById('busco').addEventListener('keyup', (evento) => {
             if (evento.key !== 'Enter') return;
 
@@ -382,7 +353,6 @@
             if (texto) {
                 buscarPeliculas(texto);
             } else {
-                // Si borran el texto y dan Enter, volvemos al catálogo normal
                 const userId = localStorage.getItem('user_id');
                 cargarCarruseles(userId);
             }
@@ -414,7 +384,6 @@
             const divReproductor = document.getElementById(`reproductor-${trailer_key}`);
             divReproductor.innerHTML = "<p style='font-size: 0.9rem; color: #ffeb3b;'>Conectando al servidor... ⏳</p>";
 
-            // CORRECCIÓN 3: Ruta completa y template literal correcto
             fetch(`http://127.0.0.1:8000/api/descargar/${trailer_key}`, { method: 'POST' })
                 .then(respuesta => respuesta.json())
                 .then(datos => {
@@ -424,7 +393,6 @@
                         divReproductor.innerHTML = "<p style='font-size: 0.9rem; color: #ffeb3b;'>Descargando (optimizado)... ⏳</p>";
                         
                         const intervalo = setInterval(() => {
-                            // CORRECCIÓN 4: Ruta completa y template literal correcto para el sondeo (polling)
                             fetch(`http://127.0.0.1:8000/api/descargar/${trailer_key}`, { method: 'POST' })
                                 .then(res => res.json())
                                 .then(nuevoEstado => {
@@ -450,7 +418,6 @@
                 </video>
             `;
             
-            // NUEVO: Revelamos los botones de Like y Favoritos cuando el video ya está listo
             document.getElementById(`acciones-${trailer_key}`).style.display = 'flex';
         }
 

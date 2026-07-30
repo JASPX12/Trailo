@@ -98,17 +98,14 @@ button:hover{
                 <input type="password" id="password" placeholder="Contraseña" required>
 
                 <button type="submit">Ingresar</button>
-                <!-- Enlace para recuperar contraseña -->
                 <div style="text-align: center; margin-top: 15px; font-size: 13px;">
                     <a href="recuperar.html" style="color: #cfcfcf; text-decoration: none; transition: 0.3s;">
                         ¿Olvidaste tu contraseña? <span style="color: #A020F0; font-weight: bold;">Actualízala</span>
                     </a>
                 </div>
-                <!-- Mensaje de error oculto por defecto -->
                 <p id="mensaje-error" style="color: #ff4d4d; text-align: center; font-size: 14px; display: none;"></p>
             </form>
 
-            <!-- Nuevo enlace profesional -->
             <div style="text-align: center; margin-top: 25px; font-size: 14px;">
                 ¿Aún no tienes una cuenta? <a href="registro.html" style="color: #A020F0; text-decoration: none; font-weight: bold; transition: 0.3s;">Regístrate aquí</a>
             </div>
@@ -136,11 +133,9 @@ button:hover{
                 const datos = await respuesta.json();
 
                 if (respuesta.ok) {
-                    // Guardamos el ID del usuario y la sesión en el navegador (Local Storage)
                     localStorage.setItem('user_id', datos.user_id);
                     localStorage.setItem('session_id', datos.session_id);
 
-                    // Redirigimos al catálogo
                     window.location.href = "index.html";
                 } else {
                     mensajeError.textContent = datos.detail || "Error al iniciar sesión.";

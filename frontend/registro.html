@@ -57,7 +57,6 @@
             font-size: 16px;
         }
 
-        /* Cambiar el color del texto de la opción seleccionada por defecto */
         select:invalid {
             color: gray;
         }
@@ -107,7 +106,6 @@
         <div class="login-box">
             <h1>Registrarse</h1>
 
-            <!-- Formulario conectado a JS -->
             <form id="form-registro">
                 <input type="text" id="nombre" placeholder="Nombre completo" required>
 
@@ -117,7 +115,6 @@
 
                 <select id="nacionalidad" required>
                     <option value="" disabled selected>Selecciona tu nacionalidad</option>
-                    <!-- El value es lo que se envía al backend (2 letras), el texto fuera es lo que ve el usuario -->
                     <option id = "seleccion_pais" value="CO">Colombia</option>
                     <option id = "seleccion_pais" value="MX">México</option>
                     <option id = "seleccion_pais" value="AR">Argentina</option>
@@ -139,11 +136,9 @@
     </div>
 
     <script>
-        // Capturar el evento de envío del formulario
         document.getElementById('form-registro').addEventListener('submit', async function(event) {
             event.preventDefault(); // Evita que la página se recargue
 
-            // Obtener los valores del formulario
             const nombre = document.getElementById('nombre').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -151,10 +146,8 @@
 
             const mensajeError = document.getElementById('mensaje-error');
 
-            // Ocultar mensaje de error previo
             mensajeError.style.display = 'none';
 
-            // Estructura que espera FastAPI según nuestro Pydantic BaseModel
             const datosUsuario = {
                 nombre: nombre,
                 email: email,
@@ -163,7 +156,6 @@
             };
 
             try {
-                // Hacer la petición POST al backend
                 const respuesta = await fetch('http://127.0.0.1:8000/api/registro', {
                     method: 'POST',
                     headers: {
@@ -175,11 +167,9 @@
                 const datos = await respuesta.json();
 
                 if (respuesta.ok) {
-                    // Si el registro fue exitoso
                     alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
-                    window.location.href = "log.html"; // Redirigir al inicio de sesión
+                    window.location.href = "log.html"; 
                 } else {
-                    // Si hubo un error (ej: Email ya registrado)
                     mensajeError.textContent = datos.detail || "Ocurrió un error en el registro.";
                     mensajeError.style.display = 'block';
                 }
