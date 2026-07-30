@@ -61,6 +61,75 @@
         .btn-header-fav:hover { background-color: #A020F0; }
         .btn-header-salir { background-color: #A020F0; color: white; }
         .btn-header-salir:hover { background-color: #7b1fa2; }
+
+        .modal-overlay {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); /* Fondo oscuro translúcido */
+            z-index: 2000; /* Siempre por encima de todo */
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px); /* Efecto de desenfoque moderno */
+        }
+
+        .modal-contenido {
+            background: #111114;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px; /* Tamaño máximo del reproductor */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            position: relative;
+            border: 1px solid #333;
+        }
+
+        .btn-cerrar-modal {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            background: #e91e63;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transition: 0.2s;
+        }
+
+        .btn-cerrar-modal:hover {
+            background: #c2185b;
+            transform: scale(1.1);
+        }
+
+        .acciones-modal {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .btn-accion {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-like { background: #222; color: white; border: 1px solid #e91e63; }
+        .btn-like:hover { background: #e91e63; }
+        .btn-guardar { background: #222; color: white; border: 1px solid #4caf50; }
+        .btn-guardar:hover { background: #4caf50; }
     </style>
 </head>
 <body>
@@ -86,7 +155,21 @@
             Cargar Catálogo Personalizado
         </button>
     </div>
-
+    <div id="modal-reproductor" class="modal-overlay">
+        <div class="modal-contenido">
+            <button class="btn-cerrar-modal" onclick="cerrarModal()">✕</button>
+            
+            <!-- Aquí adentro se inyectará el video dinámicamente -->
+            <div id="espacio-video-modal" style="text-align: center; color: #ffeb3b; min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                Cargando...
+            </div>
+            
+            <!-- Botones de acción debajo del video -->
+            <div id="acciones-modal" class="acciones-modal" style="display: none;">
+                <!-- Se llenarán dinámicamente para saber a qué película darle like -->
+            </div>
+        </div>
+    </div>
     <div id="contenedor-principal" style="margin-top: 30px;"></div>
 
     <script>
@@ -113,21 +196,96 @@
             // Redirigimos al inicio
             window.location.href = 'log.html';
         });
+        
+        // 1. Tarjetas más limpias (sin el reproductor adentro)
         function generarTarjetasHTML(listaPeliculas) {
             return listaPeliculas.map(peli => {
                 const miniatura = `https://img.youtube.com/vi/${peli.trailer_link}/hqdefault.jpg`;
+                const movieId = peli.movie_id; 
+
                 return `
-                    <div class="tarjeta" id="tarjeta-${peli.trailer_link}">
+                    <div class="tarjeta">
                         <h3>${peli.nombre_pelicula || peli.pelicula}</h3>
                         <div class="categorias">${peli.categorias}</div>
-                        <img src="${miniatura}" style="width: 100%; border-radius: 5px;" alt="Miniatura">
-                        <button onclick="descargarYReproducir('${peli.trailer_link}')" class="btn-descarga">
-                            ⬇️ Descargar y Reproducir
-                        </button>
-                        <div id="reproductor-${peli.trailer_link}" style="margin-top: 10px; text-align: center;"></div>
+                        
+                        <img src="${miniatura}" onclick="abrirModalDescarga('${peli.trailer_link}', ${movieId})" style="width: 100%; border-radius: 5px; cursor: pointer; transition: 0.3s;" alt="Miniatura" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">
+                        
                     </div>
                 `;
             }).join('');
+        }
+
+        // 2. Lógica para abrir el Modal y empezar a descargar
+        function abrirModalDescarga(trailer_key, movieId) {
+            const modal = document.getElementById('modal-reproductor');
+            const espacioVideo = document.getElementById('espacio-video-modal');
+            const accionesModal = document.getElementById('acciones-modal');
+            
+            // Mostramos el modal oscuro
+            modal.style.display = 'flex';
+            espacioVideo.innerHTML = '<h3>Conectando al servidor... ⏳</h3>';
+            accionesModal.style.display = 'none'; // Ocultamos los botones hasta que el video cargue
+
+            // Petición al backend (tu mismo código)
+            fetch(`http://127.0.0.1:8000/api/descargar/${trailer_key}`, { method: 'POST' })
+                .then(respuesta => respuesta.json())
+                .then(datos => {
+                    if (datos.status === "ready") {
+                        mostrarReproductorEnModal(datos.video_url, movieId);
+                    } else if (datos.status === "downloading") {
+                        espacioVideo.innerHTML = '<h3>Descargando contenido (optimizado)... ⏳</h3>';
+                        
+                        const intervalo = setInterval(() => {
+                            fetch(`http://127.0.0.1:8000/api/descargar/${trailer_key}`, { method: 'POST' })
+                                .then(res => res.json())
+                                .then(nuevoEstado => {
+                                    if (nuevoEstado.status === "ready") {
+                                        clearInterval(intervalo); 
+                                        mostrarReproductorEnModal(nuevoEstado.video_url, movieId); 
+                                    }
+                                });
+                        }, 3000);
+                    }
+                })
+                .catch(err => {
+                    espacioVideo.innerHTML = "<h3 style='color:red;'>Error al intentar reproducir.</h3>";
+                });
+        }
+
+        // 3. Inyectar el video y los botones cuando ya está descargado
+        function mostrarReproductorEnModal(url, movieId) {
+            const espacioVideo = document.getElementById('espacio-video-modal');
+            const accionesModal = document.getElementById('acciones-modal');
+            
+            // Inyectamos el video
+            espacioVideo.innerHTML = `
+                <video controls autoplay style="width: 100%; border-radius: 8px; aspect-ratio: 16/9; background: black;">
+                    <source src="${url}" type="video/mp4">
+                    Tu navegador no soporta video HTML5.
+                </video>
+            `;
+            
+            // Inyectamos los botones con el ID correcto de la película
+            accionesModal.innerHTML = `
+                <button onclick="darLike(${movieId})" class="btn-accion btn-like">
+                    ❤️ Me Gusta
+                </button>
+                <button onclick="guardarFavorito(${movieId})" class="btn-accion btn-guardar">
+                    ⭐ Añadir a mi lista
+                </button>
+            `;
+            
+            // Revelamos los botones
+            accionesModal.style.display = 'flex';
+        }
+
+        // 4. Cerrar el Modal y destruir el video para que no siga sonando
+        function cerrarModal() {
+            const modal = document.getElementById('modal-reproductor');
+            const espacioVideo = document.getElementById('espacio-video-modal');
+            
+            modal.style.display = 'none';
+            espacioVideo.innerHTML = ''; // Esto corta la reproducción inmediatamente
         }
 
         function agregarSeccion(titulo, listaPeliculas, contenedorPadre) {
@@ -205,7 +363,27 @@
                     Tu navegador no soporta video HTML5.
                 </video>
             `;
+            
+            // NUEVO: Revelamos los botones de Like y Favoritos cuando el video ya está listo
+            document.getElementById(`acciones-${trailer_key}`).style.display = 'flex';
         }
+
+        function darLike(movieId) {
+            const userId = localStorage.getItem('user_id');
+            if (!userId) return alert("Debes iniciar sesión primero");
+            
+            // Aquí irá tu lógica fetch para mandar el LIKE al backend
+            alert(`¡Le diste Like a la película con ID: ${movieId}!`);
+        }
+
+        function guardarFavorito(movieId) {
+            const userId = localStorage.getItem('user_id');
+            if (!userId) return alert("Debes iniciar sesión primero");
+            
+            // Aquí irá tu lógica fetch para mandar el GUARDADO al backend
+            alert(`¡Película con ID ${movieId} guardada en tu lista!`);
+        }
+        
     </script>
 </body>
 </html>
